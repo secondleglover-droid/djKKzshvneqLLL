@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UAV Report Tool</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2330;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --accent2: #f78166;
+    --accent3: #3fb950;
+    --text: #e6edf3;
+    --text2: #8b949e;
+    --danger: #f85149;
+    --warn: #d29922;
+    --radius: 8px;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; min-height: 100vh; }
+  
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 16px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 16px; font-weight: 700; letter-spacing: 0.04em; color: var(--accent); flex: 1; }
+  header span { font-size: 11px; color: var(--text2); }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 12px 10px 80px; }
+
+  /* Section */
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; }
+  .section-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; user-select: none; background: var(--surface2); border-bottom: 1px solid transparent; transition: background 0.15s; }
+  .section-header:hover { background: #21272f; }
+  .section-header.open { border-bottom-color: var(--border); }
+  .section-title { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; flex: 1; }
+  .section-title.lost { color: var(--accent2); }
+  .section-title.x10 { color: var(--accent); }
+  .section-title.ram { color: var(--accent3); }
+  .chevron { color: var(--text2); font-size: 18px; transition: transform 0.2s; line-height: 1; }
+  .chevron.open { transform: rotate(180deg); }
+  .section-body { display: none; padding: 14px; }
+  .section-body.open { display: block; }
+
+  /* Form elements */
+  label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; font-weight: 500; letter-spacing: 0.02em; }
+  input, select, textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 9px 12px; font-size: 14px; font-family: var(--font); outline: none; transition: border-color 0.15s; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 70px; }
+  select option { background: var(--surface); }
+
+  .field { margin-bottom: 12px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .field-row { grid-template-columns: 1fr; } }
+  .field-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .field-row-3 { grid-template-columns: 1fr 1fr; } }
+
+  .input-with-btn { display: flex; gap: 6px; }
+  .input-with-btn input { flex: 1; }
+
+  /* Buttons */
+  btn, .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; font-family: var(--font); transition: opacity 0.15s, background 0.15s; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+  .btn:active { opacity: 0.7; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-danger { background: rgba(248,81,73,0.15); color: var(--danger); border: 1px solid rgba(248,81,73,0.3); }
+  .btn-success { background: rgba(63,185,80,0.15); color: var(--accent3); border: 1px solid rgba(63,185,80,0.3); }
+  .btn-warn { background: rgba(210,153,34,0.15); color: var(--warn); border: 1px solid rgba(210,153,34,0.3); }
+  .btn-now { padding: 9px 12px; font-size: 12px; background: var(--surface2); color: var(--text2); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; white-space: nowrap; font-family: var(--font); }
+  .btn-now:active { opacity: 0.7; }
+  .btn-icon { padding: 9px 10px; background: var(--surface2); color: var(--text2); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 14px; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+  /* UAV Cards */
+  .uav-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+  .uav-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .card-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--surface2); cursor: pointer; user-select: none; }
+  .card-header:hover { background: #21272f; }
+  .card-title { flex: 1; font-size: 13px; font-weight: 600; color: var(--text); }
+  .card-body { padding: 12px; display: none; }
+  .card-body.open { display: block; }
+
+  .sidc-badge { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: rgba(88,166,255,0.15); color: var(--accent); border: 1px solid rgba(88,166,255,0.2); font-family: monospace; }
+
+  /* Flight records */
+  .flight-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+  .flight-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .flight-preview { font-size: 12px; color: var(--text2); }
+
+  /* Report output */
+  .report-out { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-family: monospace; font-size: 13px; white-space: pre-wrap; color: var(--text); line-height: 1.6; margin-top: 12px; }
+
+  /* Checkbox */
+  .check-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; cursor: pointer; }
+  .check-row input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent3); cursor: pointer; flex-shrink: 0; }
+  .check-row span { font-size: 13px; color: var(--text); }
+
+  .hidden { display: none !important; }
+
+  /* Divider */
+  hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+
+  .add-btn-wrap { padding: 4px 0; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--accent3); color: #000; font-weight: 700; padding: 10px 22px; border-radius: 40px; font-size: 13px; z-index: 9999; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+
+  /* Sticky bottom bar on mobile */
+  @media (max-width: 600px) {
+    .toolbar { position: static; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ UAV Report Tool</h1>
+  <span id="clock"></span>
+</header>
+
+<div class="container">
+
+  <!-- SECTION 1: LOST UAVS -->
+  <div class="section">
+    <div class="section-header" onclick="toggleSection('lost')">
+      <span class="section-title lost">1. Втрата БПЛА</span>
+      <span class="chevron" id="chevron-lost">▼</span>
+    </div>
+    <div class="section-body" id="body-lost">
+      <div class="uav-list" id="uav-list"></div>
+      <div class="add-btn-wrap">
+        <button class="btn btn-secondary" onclick="addUAV()">＋ Додати БПЛА</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: X10 REPORT -->
+  <div class="section">
+    <div class="section-header" onclick="toggleSection('x10')">
+      <span class="section-title x10">2. Х10 Звіт</span>
+      <span class="chevron" id="chevron-x10">▼</span>
+    </div>
+    <div class="section-body" id="body-x10">
+      <div class="field-row">
+        <div class="field">
+          <label>Дата звіту</label>
+          <div class="input-with-btn">
+            <input type="date" id="x10-date" oninput="saveX10();renderX10()">
+            <button class="btn-now" onclick="document.getElementById('x10-date').value=todayStr();saveX10();renderX10()">Сьогодні</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>ТГ</label>
+          <input type="text" id="x10-tg" placeholder="Назва ТГ" oninput="saveX10();renderX10()">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Гр</label>
+          <input type="text" id="x10-group" placeholder="Назва групи" oninput="saveX10();renderX10()">
+        </div>
+        <div class="field">
+          <label>Склад групи</label>
+          <input type="text" id="x10-composition" placeholder="Склад" oninput="saveX10();renderX10()">
+        </div>
+      </div>
+      <div class="field">
+        <label>Завдання</label>
+        <input type="text" id="x10-mission" placeholder="Завдання" oninput="saveX10();renderX10()">
+      </div>
+      <div class="field">
+        <label>Легенда роботи</label>
+        <input type="text" id="x10-legend" placeholder="Легенда" oninput="saveX10();renderX10()">
+      </div>
+      <div class="field">
+        <label>Результат роботи</label>
+        <input type="text" id="x10-result" placeholder="Результат" oninput="saveX10();renderX10()">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Район роботи</label>
+          <input type="text" id="x10-area" placeholder="Район" oninput="saveX10();renderX10()">
+        </div>
+        <div class="field">
+          <label>Місце проведення</label>
+          <input type="text" id="x10-location" placeholder="Місце" oninput="saveX10();renderX10()">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Зв'язок</label>
+          <input type="text" id="x10-comm" placeholder="Зв'язок" oninput="saveX10();renderX10()">
+        </div>
+        <div class="field">
+          <label>Авто</label>
+          <input type="text" id="x10-vehicle" placeholder="Авто" oninput="saveX10();renderX10()">
+        </div>
+      </div>
+      <div class="field">
+        <label>Медевак</label>
+        <input type="text" id="x10-medevac" placeholder="Медевак" oninput="saveX10();renderX10()">
+      </div>
+      <label class="check-row" onclick="">
+        <input type="checkbox" id="x10-personnel" onchange="togglePersonnel();saveX10();renderX10()">
+        <span>Особовий склад, зброя, майно в наявності</span>
+      </label>
+      <div class="field" id="x10-explanation-wrap">
+        <label>Пояснення</label>
+        <textarea id="x10-explanation" rows="2" placeholder="Вкажіть пояснення..." oninput="saveX10();renderX10()"></textarea>
+      </div>
+      <div class="report-out" id="x10-preview"></div>
+      <div class="toolbar">
+        <button class="btn btn-secondary" onclick="copyX10()">📋 Скопіювати</button>
+        <button class="btn btn-secondary" onclick="exportX10TXT()">⬇ Export TXT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: RAM HUB -->
+  <div class="section">
+    <div class="section-header" onclick="toggleSection('ram')">
+      <span class="section-title ram">3. RAM HUB Звіт</span>
+      <span class="chevron" id="chevron-ram">▼</span>
+    </div>
+    <div class="section-body" id="body-ram">
+      <div class="flight-list" id="flight-list"></div>
+      <div class="add-btn-wrap">
+        <button class="btn btn-secondary" onclick="addFlight()">＋ Додати виліт</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== UAV TYPES =====================
+const UAV_TYPES = [
+  { name: "Shark-M" },
+  { name: "Ram-2X" },
+  { name: "Ram-3X" },
+];
+
+const UAV_COMM_OPTIONS = ["Starlink","Silvus 4.4","Silvus 2.2"];
+const UAV_REASON_OPTIONS = ["FPV-ППО","ЗРК-ТОР","ЗРГК Панцирь","МВГ"];
+
+const COMM_OPTIONS = ["Стійкий","Нестійкий","Відсутній","Motorolla","Baofeng","Starlink","Інше"];
+const RESULT_OPTIONS = ["Уражено","Не уражено"];
+
+let uavs = [];
+let flights = [];
+let uavCounter = 0;
+let flightCounter = 0;
+
+// ===================== UTILS =====================
+function nowDT() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function formatDT(s) { return s ? s.replace('T',' ').slice(0,16) : ''; }
+function formatDate(s) {
+  if (!s) return '';
+  const [y,m,d] = s.split('-');
+  return `${d}.${m}.${y}`;
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+function saveLS(k,v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+function loadLS(k,def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch(e){ return def; } }
+
+// ===================== SECTIONS =====================
+function toggleSection(name) {
+  const body = document.getElementById('body-'+name);
+  const chevron = document.getElementById('chevron-'+name);
+  const header = body.previousElementSibling;
+  const open = body.classList.toggle('open');
+  chevron.classList.toggle('open', open);
+  header.classList.toggle('open', open);
+  const sects = loadLS('sections', {});
+  sects[name] = open;
+  saveLS('sections', sects);
+}
+function initSections() {
+  const sects = loadLS('sections', { lost: true, x10: false, ram: false });
+  ['lost','x10','ram'].forEach(n => {
+    if (sects[n]) {
+      document.getElementById('body-'+n).classList.add('open');
+      document.getElementById('chevron-'+n).classList.add('open');
+      document.querySelector(`[onclick="toggleSection('${n}')"]`).classList.add('open');
+    }
+  });
+}
+
+// ===================== UAV =====================
+function addUAV(data) {
+  const id = ++uavCounter;
+  const uav = data || {
+    id, type: loadLS('last_uav_type','0'), comm: loadLS('last_uav_comm','Starlink'),
+    reason: loadLS('last_uav_reason','FPV-ППО'), lossTime:'', coords:'', height:'', open: true
+  };
+  uav.id = id;
+  uavs.push(uav);
+  renderUAVCard(uav);
+}
+function renderUAVCard(uav) {
+  const list = document.getElementById('uav-list');
+  const card = document.createElement('div');
+  card.className = 'uav-card';
+  card.id = 'uav-card-'+uav.id;
+  card.innerHTML = uavCardHTML(uav);
+  list.appendChild(card);
+  updateUAVCardTitle(uav.id);
+  renderUAVPreview(uav.id);
+}
+function uavCardHTML(uav) {
+  const typeOpts = UAV_TYPES.map((t,i)=>`<option value="${i}" ${String(i)==String(uav.type)?'selected':''}>${t.name}</option>`).join('');
+  const commOpts = UAV_COMM_OPTIONS.map(c=>`<option ${c===(uav.comm||'Starlink')?'selected':''}>${c}</option>`).join('');
+  const reasonOpts = UAV_REASON_OPTIONS.map(r=>`<option ${r===(uav.reason||'FPV-ППО')?'selected':''}>${r}</option>`).join('');
+  return `
+  <div class="card-header" onclick="toggleUAV(${uav.id})">
+    <span class="card-title" id="uav-title-${uav.id}">БПЛА #${uav.id}</span>
+    <span class="chevron ${uav.open?'open':''}" id="uav-chev-${uav.id}">▼</span>
+    <button class="btn btn-danger btn-sm" onclick="removeUAV(${uav.id},event)" style="padding:4px 10px;font-size:11px;">✕</button>
+  </div>
+  <div class="card-body ${uav.open?'open':''}" id="uav-body-${uav.id}">
+    <div class="field-row">
+      <div class="field">
+        <label>Тип БПЛА</label>
+        <select id="uav-type-${uav.id}" onchange="saveUAV(${uav.id});updateUAVCardTitle(${uav.id});renderUAVPreview(${uav.id})">
+          ${typeOpts}
+        </select>
+      </div>
+      <div class="field">
+        <label>Зв'язок</label>
+        <select id="uav-comm-${uav.id}" onchange="saveUAV(${uav.id});renderUAVPreview(${uav.id})">
+          ${commOpts}
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Причина втрати</label>
+        <select id="uav-reason-${uav.id}" onchange="saveUAV(${uav.id});renderUAVPreview(${uav.id})">
+          ${reasonOpts}
+        </select>
+      </div>
+      <div class="field">
+        <label>Висота</label>
+        <input type="text" id="uav-height-${uav.id}" value="${uav.height||''}" placeholder="Висота (м)" oninput="saveUAV(${uav.id});renderUAVPreview(${uav.id})">
+      </div>
+    </div>
+    <div class="field">
+      <label>Координати</label>
+      <input type="text" id="uav-coords-${uav.id}" value="${uav.coords||''}" placeholder="Координати" oninput="saveUAV(${uav.id});renderUAVPreview(${uav.id})">
+    </div>
+    <div class="field">
+      <label>Дата і час втрати</label>
+      <div class="input-with-btn">
+        <input type="datetime-local" id="uav-losstime-${uav.id}" value="${uav.lossTime||''}" oninput="saveUAV(${uav.id});renderUAVPreview(${uav.id})">
+        <button class="btn-now" onclick="setNow('uav-losstime-${uav.id}');saveUAV(${uav.id});renderUAVPreview(${uav.id})">Зараз</button>
+      </div>
+    </div>
+    <div class="report-out" id="uav-preview-${uav.id}"></div>
+    <div class="toolbar">
+      <button class="btn btn-secondary" onclick="copyUAV(${uav.id})">📋 Скопіювати</button>
+      <button class="btn btn-secondary" onclick="exportUAVTXT(${uav.id})">⬇ Export TXT</button>
+    </div>
+  </div>`;
+}
+function toggleUAV(id) {
+  const body = document.getElementById('uav-body-'+id);
+  const chev = document.getElementById('uav-chev-'+id);
+  const open = body.classList.toggle('open');
+  chev.classList.toggle('open', open);
+  const u = uavs.find(x=>x.id===id);
+  if (u) { u.open = open; saveUAVs(); }
+}
+function removeUAV(id, e) {
+  e.stopPropagation();
+  uavs = uavs.filter(x=>x.id!==id);
+  const card = document.getElementById('uav-card-'+id);
+  if (card) card.remove();
+  saveUAVs();
+}
+function onUAVType(id) {} // unused, kept for safety
+function updateUAVCardTitle(id) {
+  const u = uavs.find(x=>x.id===id);
+  if (!u) return;
+  const idx = parseInt(u.type)||0;
+  const name = UAV_TYPES[idx]?.name || 'БПЛА';
+  const comm = u.comm || 'Starlink';
+  const dt = u.lossTime ? u.lossTime.replace('T',' ').slice(0,16) : '--';
+  document.getElementById('uav-title-'+id).textContent = `${name} | ${comm} | ${dt}`;
+}
+function saveUAV(id) {
+  const u = uavs.find(x=>x.id===id);
+  if (!u) return;
+  u.type = document.getElementById('uav-type-'+id)?.value || '0';
+  u.comm = document.getElementById('uav-comm-'+id)?.value || 'Starlink';
+  u.reason = document.getElementById('uav-reason-'+id)?.value || 'FPV-ППО';
+  u.height = document.getElementById('uav-height-'+id)?.value || '';
+  u.coords = document.getElementById('uav-coords-'+id)?.value || '';
+  u.lossTime = document.getElementById('uav-losstime-'+id)?.value || '';
+  saveLS('last_uav_type', u.type);
+  saveLS('last_uav_comm', u.comm);
+  saveLS('last_uav_reason', u.reason);
+  updateUAVCardTitle(id);
+  saveUAVs();
+}
+function saveUAVs() {
+  saveLS('uavs', uavs.map(u => ({
+    type: u.type, comm: u.comm, reason: u.reason,
+    height: u.height, coords: u.coords, lossTime: u.lossTime, open: u.open
+  })));
+}
+function loadUAVs() {
+  const saved = loadLS('uavs', []);
+  saved.forEach(d => addUAV(d));
+}
+function getUAVText(id) {
+  const u = uavs.find(x=>x.id===id);
+  if (!u) return '';
+  const idx = parseInt(u.type)||0;
+  const rawName = UAV_TYPES[idx]?.name || '';
+  const displayName = rawName.replace(/-/g,' ');
+  const dt = u.lossTime ? u.lossTime.replace('T',' ').slice(0,16) : '';
+  const lines = [
+    `Назва: ${rawName} (${u.comm||''})`,
+    `Тип БПЛА: ${displayName}`,
+    u.coords ? u.coords : '',
+    `Зауваження штабу: ${u.reason||''}`,
+    dt,
+    `Висота: ${u.height||''} (м)`
+  ].filter(l => l !== '');
+  return lines.join('\n');
+}
+function renderUAVPreview(id) {
+  const el = document.getElementById('uav-preview-'+id);
+  if (el) el.textContent = getUAVText(id);
+}
+function copyUAV(id) {
+  const text = getUAVText(id);
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(()=>showToast('Скопійовано!')).catch(()=>copyUAVFallback(text));
+  } else {
+    copyUAVFallback(text);
+  }
+}
+function copyUAVFallback(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try { document.execCommand('copy'); showToast('Скопійовано!'); } catch(e) { showToast('Помилка копіювання'); }
+  document.body.removeChild(ta);
+}
+function exportUAVTXT(id) {
+  const blob = new Blob([getUAVText(id)], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `uav_loss_${id}.txt`;
+  a.click();
+  showToast('TXT збережено');
+}
+
+function setNow(fieldId) {
+  document.getElementById(fieldId).value = nowDT();
+}
+
+// ===================== X10 =====================
+function saveX10() {
+  saveLS('x10', {
+    date: v('x10-date'), tg: v('x10-tg'), group: v('x10-group'),
+    composition: v('x10-composition'), mission: v('x10-mission'),
+    legend: v('x10-legend'), result: v('x10-result'), area: v('x10-area'),
+    location: v('x10-location'), comm: v('x10-comm'), vehicle: v('x10-vehicle'),
+    medevac: v('x10-medevac'), personnel: document.getElementById('x10-personnel').checked,
+    explanation: v('x10-explanation')
+  });
+  saveLS('last_comm', v('x10-comm'));
+  saveLS('last_tg', v('x10-tg'));
+  saveLS('last_group', v('x10-group'));
+}
+function loadX10() {
+  const d = loadLS('x10', {});
+  setV('x10-date', d.date || todayStr());
+  setV('x10-tg', d.tg || loadLS('last_tg',''));
+  setV('x10-group', d.group || loadLS('last_group',''));
+  setV('x10-composition', d.composition || '');
+  setV('x10-mission', d.mission || '');
+  setV('x10-legend', d.legend || '');
+  setV('x10-result', d.result || '');
+  setV('x10-area', d.area || '');
+  setV('x10-location', d.location || '');
+  setV('x10-comm', d.comm || loadLS('last_comm',''));
+  setV('x10-vehicle', d.vehicle || '');
+  setV('x10-medevac', d.medevac || '');
+  setV('x10-explanation', d.explanation || '');
+  const checked = d.personnel !== undefined ? d.personnel : true;
+  document.getElementById('x10-personnel').checked = checked;
+  togglePersonnel();
+  renderX10();
+}
+function togglePersonnel() {
+  const checked = document.getElementById('x10-personnel').checked;
+  document.getElementById('x10-explanation-wrap').classList.toggle('hidden', checked);
+}
+function todayStr() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function v(id) { const el = document.getElementById(id); if (!el) return ''; return el.value || ''; }
+function setV(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
+function getX10Text() {
+  const date = formatDate(v('x10-date'));
+  const tg = v('x10-tg');
+  const group = v('x10-group');
+  const comp = v('x10-composition');
+  const mission = v('x10-mission');
+  const legend = v('x10-legend');
+  const result = v('x10-result');
+  const area = v('x10-area');
+  const location = v('x10-location');
+  const comm = v('x10-comm');
+  const vehicle = v('x10-vehicle');
+  const medevac = v('x10-medevac');
+  const personnel = document.getElementById('x10-personnel').checked;
+  const explanation = v('x10-explanation');
+  let lines = [`Х10`, `Звіт за ${date}`,
+    `ТГ: ${tg}`, `Гр: ${group}`, `Склад групи: ${comp}`,
+    `Завдання: ${mission}`, `Легенда роботи: ${legend}`,
+    `Результат роботи: ${result}`, `Район роботи: ${area}`,
+    `Місце проведення: ${location}`, `Зв'язок: ${comm}`,
+    `Авто: ${vehicle}`, `Медевак: ${medevac}`
+  ];
+  if (personnel) {
+    lines.push('Особовий склад, зброя, майно в наявності');
+  } else {
+    lines.push(explanation || '');
+  }
+  return lines.join('\n');
+}
+function renderX10() {
+  document.getElementById('x10-preview').textContent = getX10Text();
+}
+function copyX10() {
+  navigator.clipboard.writeText(getX10Text()).then(()=>showToast('Скопійовано!')).catch(()=>showToast('Помилка копіювання'));
+}
+function exportX10TXT() {
+  const blob = new Blob([getX10Text()], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'x10_report.txt';
+  a.click();
+  showToast('TXT збережено');
+}
+
+// ===================== FLIGHTS =====================
+function addFlight(data) {
+  const id = ++flightCounter;
+  const fl = data || {
+    id, datetime:'', unit: loadLS('last_unit',''), aircraft:'',
+    daynight:'День', target:'', result:'Уражено',
+    addTarget:'', addResult:'Уражено',
+    coords:'', comm: loadLS('last_comm',''),
+    wind:'', distance:'', warhead:'', angle:'', notes:'', open: true,
+    hasAddTarget: false
+  };
+  fl.id = id;
+  flights.push(fl);
+  renderFlightCard(fl);
+}
+function flightCardHTML(fl) {
+  const resultOpts = RESULT_OPTIONS.map(r=>`<option ${r===fl.result?'selected':''}>${r}</option>`).join('');
+  const addResultOpts = RESULT_OPTIONS.map(r=>`<option ${r===fl.addResult?'selected':''}>${r}</option>`).join('');
+  const commOpts = ['Starlink','Silvus 2.2','Silvus 4.4'].map(c=>`<option ${c===fl.comm?'selected':''}>${c}</option>`).join('');
+  const dnOpts = ['День','Ніч'].map(d=>`<option ${d===fl.daynight?'selected':''}>${d}</option>`).join('');
+  return `
+  <div class="card-header" onclick="toggleFlight(${fl.id})">
+    <span class="card-title" id="fl-title-${fl.id}">${flightTitle(fl)}</span>
+    <span class="chevron ${fl.open?'open':''}" id="fl-chev-${fl.id}">▼</span>
+    <button class="btn btn-danger btn-sm" onclick="removeFlight(${fl.id},event)">✕</button>
+  </div>
+  <div class="card-body ${fl.open?'open':''}" id="fl-body-${fl.id}">
+    <div class="field-row">
+      <div class="field">
+        <label>Дата/час</label>
+        <div class="input-with-btn">
+          <input type="datetime-local" id="fl-dt-${fl.id}" value="${fl.datetime}" oninput="saveFlight(${fl.id});updateFlightTitle(${fl.id})">
+          <button class="btn-now" onclick="setNow('fl-dt-${fl.id}');saveFlight(${fl.id});updateFlightTitle(${fl.id})">Зараз</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Підрозділ</label>
+        <input type="text" id="fl-unit-${fl.id}" value="${fl.unit||''}" placeholder="Підрозділ" oninput="saveFlight(${fl.id})">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Борт</label>
+        <div class="input-with-btn">
+          <input type="text" id="fl-aircraft-${fl.id}" value="${fl.aircraft||''}" placeholder="Номер борту" oninput="saveFlight(${fl.id})">
+          <button class="btn-icon" onclick="copyAircraft(${fl.id})" title="Копіювати">📋</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>День/Ніч</label>
+        <select id="fl-dn-${fl.id}" onchange="saveFlight(${fl.id})">${dnOpts}</select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Ціль</label>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="fl-target-${fl.id}" value="${fl.target||''}" placeholder="Ціль" oninput="saveFlight(${fl.id})" style="flex:1;">
+        <select id="fl-result-${fl.id}" onchange="saveFlight(${fl.id})" style="width:140px;">${resultOpts}</select>
+      </div>
+    </div>
+    <div class="field" id="fl-addtarget-wrap-${fl.id}" ${fl.hasAddTarget?'':'style="display:none"'}>
+      <label>Додаткова ціль</label>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="fl-addtarget-${fl.id}" value="${fl.addTarget||''}" placeholder="Додаткова ціль" oninput="saveFlight(${fl.id})" style="flex:1;">
+        <select id="fl-addresult-${fl.id}" onchange="saveFlight(${fl.id})" style="width:140px;">${addResultOpts}</select>
+      </div>
+    </div>
+    <div class="field" style="text-align:left;">
+      <button class="btn btn-secondary btn-sm" onclick="toggleAddTarget(${fl.id})" id="fl-addtargetbtn-${fl.id}">${fl.hasAddTarget?'− Прибрати додаткову ціль':'＋ Додаткова ціль'}</button>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Координати</label>
+        <input type="text" id="fl-coords-${fl.id}" value="${fl.coords||''}" placeholder="Координати" oninput="saveFlight(${fl.id})">
+      </div>
+      <div class="field">
+        <label>Зв'язок</label>
+        <select id="fl-comm-${fl.id}" onchange="saveFlight(${fl.id})">${commOpts}</select>
+      </div>
+    </div>
+    <div class="field-row-3">
+      <div class="field">
+        <label>Вітер</label>
+        <input type="text" id="fl-wind-${fl.id}" value="${fl.wind||''}" placeholder="Вітер" oninput="saveFlight(${fl.id})">
+      </div>
+      <div class="field">
+        <label>Відстань</label>
+        <input type="text" id="fl-dist-${fl.id}" value="${fl.distance||''}" placeholder="Відстань" oninput="saveFlight(${fl.id})">
+      </div>
+      <div class="field">
+        <label>Тип БЧ</label>
+        <input type="text" id="fl-warhead-${fl.id}" value="${fl.warhead||''}" placeholder="Тип БЧ" oninput="saveFlight(${fl.id})">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Кут атаки</label>
+        <input type="text" id="fl-angle-${fl.id}" value="${fl.angle||''}" placeholder="Кут атаки" oninput="saveFlight(${fl.id})">
+      </div>
+      <div class="field">
+        <label>Примітка</label>
+        <input type="text" id="fl-notes-${fl.id}" value="${fl.notes||''}" placeholder="Примітка" oninput="saveFlight(${fl.id})">
+      </div>
+    </div>
+    <div class="report-out" id="fl-preview-${fl.id}"></div>
+    <div class="toolbar">
+      <button class="btn btn-secondary" onclick="copyFlight(${fl.id})">📋 Скопіювати</button>
+      <button class="btn btn-secondary" onclick="exportFlightTXT(${fl.id})">⬇ Export TXT</button>
+    </div>
+  </div>`;
+}
+function flightTitle(fl) {
+  const dt = fl.datetime ? fl.datetime.replace('T',' ').slice(0,16) : '--';
+  const aircraft = fl.aircraft || '?';
+  return `${dt} | ${aircraft}`;
+}
+function updateFlightTitle(id) {
+  const fl = flights.find(x=>x.id===id);
+  if (!fl) return;
+  document.getElementById('fl-title-'+id).textContent = flightTitle(fl);
+}
+function renderFlightCard(fl) {
+  const list = document.getElementById('flight-list');
+  const card = document.createElement('div');
+  card.className = 'flight-card';
+  card.id = 'fl-card-'+fl.id;
+  card.innerHTML = flightCardHTML(fl);
+  list.appendChild(card);
+  renderFlightPreview(fl.id);
+}
+function toggleFlight(id) {
+  const body = document.getElementById('fl-body-'+id);
+  const chev = document.getElementById('fl-chev-'+id);
+  const open = body.classList.toggle('open');
+  chev.classList.toggle('open', open);
+  const fl = flights.find(x=>x.id===id);
+  if (fl) { fl.open = open; saveFlights(); }
+}
+function removeFlight(id, e) {
+  e.stopPropagation();
+  flights = flights.filter(x=>x.id!==id);
+  const card = document.getElementById('fl-card-'+id);
+  if (card) card.remove();
+  saveFlights();
+}
+function toggleAddTarget(id) {
+  const fl = flights.find(x=>x.id===id);
+  if (!fl) return;
+  fl.hasAddTarget = !fl.hasAddTarget;
+  const wrap = document.getElementById('fl-addtarget-wrap-'+id);
+  const btn = document.getElementById('fl-addtargetbtn-'+id);
+  wrap.style.display = fl.hasAddTarget ? '' : 'none';
+  btn.textContent = fl.hasAddTarget ? '− Прибрати додаткову ціль' : '＋ Додаткова ціль';
+  saveFlights();
+}
+function copyAircraft(id) {
+  const val = document.getElementById('fl-aircraft-'+id)?.value || '';
+  navigator.clipboard.writeText(val).then(()=>showToast('Борт скопійовано')).catch(()=>{});
+}
+function saveFlight(id) {
+  const fl = flights.find(x=>x.id===id);
+  if (!fl) return;
+  fl.datetime = document.getElementById('fl-dt-'+id)?.value || '';
+  fl.unit = document.getElementById('fl-unit-'+id)?.value || '';
+  fl.aircraft = document.getElementById('fl-aircraft-'+id)?.value || '';
+  fl.daynight = document.getElementById('fl-dn-'+id)?.value || 'День';
+  fl.target = document.getElementById('fl-target-'+id)?.value || '';
+  fl.result = document.getElementById('fl-result-'+id)?.value || 'Уражено';
+  fl.addTarget = document.getElementById('fl-addtarget-'+id)?.value || '';
+  fl.addResult = document.getElementById('fl-addresult-'+id)?.value || 'Уражено';
+  fl.coords = document.getElementById('fl-coords-'+id)?.value || '';
+  fl.comm = document.getElementById('fl-comm-'+id)?.value || '';
+  fl.wind = document.getElementById('fl-wind-'+id)?.value || '';
+  fl.distance = document.getElementById('fl-dist-'+id)?.value || '';
+  fl.warhead = document.getElementById('fl-warhead-'+id)?.value || '';
+  fl.angle = document.getElementById('fl-angle-'+id)?.value || '';
+  fl.notes = document.getElementById('fl-notes-'+id)?.value || '';
+  updateFlightTitle(id);
+  renderFlightPreview(id);
+  saveLS('last_unit', fl.unit);
+  saveLS('last_comm', fl.comm);
+  saveFlights();
+}
+function getFlightText(id) {
+  const fl = flights.find(x=>x.id===id);
+  if (!fl) return '';
+  let lines = [];
+  lines.push(fl.datetime ? fl.datetime.replace('T',' ').slice(0,16) : '');
+  lines.push(`Підрозділ: ${fl.unit}`);
+  lines.push(`Борт: ${fl.aircraft} ${fl.daynight}`);
+  lines.push('Ціль:');
+  lines.push(`${fl.target} (${fl.result})`);
+  if (fl.hasAddTarget && fl.addTarget) {
+    lines.push(`${fl.addTarget} (${fl.addResult})`);
+  }
+  lines.push(`Координати: ${fl.coords}`);
+  lines.push(`Зв'язок: ${fl.comm}`);
+  lines.push(`Вітер: ${fl.wind}`);
+  lines.push(`Відстань: ${fl.distance}`);
+  lines.push(`Тип БЧ: ${fl.warhead}`);
+  lines.push(`Кут атаки: ${fl.angle}`);
+  lines.push(`Примітка: ${fl.notes}`);
+  return lines.join('\n');
+}
+function renderFlightPreview(id) {
+  const el = document.getElementById('fl-preview-'+id);
+  if (el) el.textContent = getFlightText(id);
+}
+function copyFlight(id) {
+  navigator.clipboard.writeText(getFlightText(id)).then(()=>showToast('Скопійовано!')).catch(()=>{});
+}
+function exportFlightTXT(id) {
+  const fl = flights.find(x=>x.id===id);
+  const blob = new Blob([getFlightText(id)], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `flight_${id}.txt`;
+  a.click();
+  showToast('TXT збережено');
+}
+function saveFlights() {
+  saveLS('flights', flights.map(fl=>({...fl})));
+}
+function loadFlights() {
+  const saved = loadLS('flights', []);
+  saved.forEach(d => addFlight(d));
+}
+
+// ===================== CLOCK =====================
+function updateClock() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  document.getElementById('clock').textContent = 
+    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ===================== INIT =====================
+initSections();
+loadUAVs();
+loadX10();
+loadFlights();
+</script>
+</body>
+</html>
