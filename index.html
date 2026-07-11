@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>UAV Report Tool</title>
+<title>Звіти 8-10</title>
 <style>
   :root {
     --bg: #0d1117;
@@ -117,7 +117,7 @@
 <body>
 
 <header>
-  <h1>⚡ UAV Report Tool</h1>
+  <h1>📋 Звіти 8-10</h1>
   <span id="clock"></span>
 </header>
 
@@ -170,10 +170,6 @@
       <div class="field">
         <label>Завдання</label>
         <input type="text" id="x10-mission" placeholder="Завдання" oninput="saveX10();renderX10()">
-      </div>
-      <div class="field">
-        <label>Легенда роботи</label>
-        <input type="text" id="x10-legend" placeholder="Легенда" oninput="saveX10();renderX10()">
       </div>
       <div class="field">
         <label>Результат роботи</label>
@@ -246,7 +242,7 @@ const UAV_TYPES = [
 ];
 
 const UAV_COMM_OPTIONS = ["Starlink","Silvus 4.4","Silvus 2.2"];
-const UAV_REASON_OPTIONS = ["FPV-ППО","ЗРК-ТОР","ЗРГК Панцирь","МВГ"];
+const UAV_REASON_OPTIONS = ["FPV-ППО","ЗРК-ТОР","ЗРГК Панцирь","МВГ","Невідомо"];
 
 const COMM_OPTIONS = ["Стійкий","Нестійкий","Відсутній","Motorolla","Baofeng","Starlink","Інше"];
 const RESULT_OPTIONS = ["Уражено","Не уражено"];
@@ -485,7 +481,7 @@ function saveX10() {
   saveLS('x10', {
     date: v('x10-date'), tg: v('x10-tg'), group: v('x10-group'),
     composition: v('x10-composition'), mission: v('x10-mission'),
-    legend: v('x10-legend'), result: v('x10-result'), area: v('x10-area'),
+    result: v('x10-result'), area: v('x10-area'),
     location: v('x10-location'), comm: v('x10-comm'), vehicle: v('x10-vehicle'),
     medevac: v('x10-medevac'), personnel: document.getElementById('x10-personnel').checked,
     explanation: v('x10-explanation')
@@ -501,7 +497,6 @@ function loadX10() {
   setV('x10-group', d.group || loadLS('last_group',''));
   setV('x10-composition', d.composition || '');
   setV('x10-mission', d.mission || '');
-  setV('x10-legend', d.legend || '');
   setV('x10-result', d.result || '');
   setV('x10-area', d.area || '');
   setV('x10-location', d.location || '');
@@ -531,7 +526,6 @@ function getX10Text() {
   const group = v('x10-group');
   const comp = v('x10-composition');
   const mission = v('x10-mission');
-  const legend = v('x10-legend');
   const result = v('x10-result');
   const area = v('x10-area');
   const location = v('x10-location');
@@ -542,7 +536,7 @@ function getX10Text() {
   const explanation = v('x10-explanation');
   let lines = [`Х10`, `Звіт за ${date}`,
     `ТГ: ${tg}`, `Гр: ${group}`, `Склад групи: ${comp}`,
-    `Завдання: ${mission}`, `Легенда роботи: ${legend}`,
+    `Завдання: ${mission}`,
     `Результат роботи: ${result}`, `Район роботи: ${area}`,
     `Місце проведення: ${location}`, `Зв'язок: ${comm}`,
     `Авто: ${vehicle}`, `Медевак: ${medevac}`
