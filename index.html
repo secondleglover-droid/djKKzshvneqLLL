@@ -356,7 +356,10 @@ function uavCardHTML(uav) {
     </div>
     <div class="field">
       <label>Координати</label>
-      <input type="text" id="uav-coords-${uav.id}" value="${uav.coords||''}" placeholder="Координати" oninput="saveUAV(${uav.id});renderUAVPreview(${uav.id})">
+      <div class="input-with-btn">
+        <input type="text" id="uav-coords-${uav.id}" value="${uav.coords||''}" placeholder="Координати" oninput="saveUAV(${uav.id});renderUAVPreview(${uav.id})">
+        <button class="btn-now" onclick="pasteCoords('uav-coords-${uav.id}',${uav.id})">Вставити</button>
+      </div>
     </div>
     <div class="field">
       <label>Дата і час втрати</label>
@@ -474,6 +477,16 @@ function exportUAVTXT(id) {
 
 function setNow(fieldId) {
   document.getElementById(fieldId).value = nowDT();
+}
+function pasteCoords(fieldId, uavId) {
+  if (navigator.clipboard && navigator.clipboard.readText) {
+    navigator.clipboard.readText().then(text => {
+      const el = document.getElementById(fieldId);
+      if (el) { el.value = text.trim(); saveUAV(uavId); renderUAVPreview(uavId); }
+    }).catch(() => showToast('Дозвольте доступ до буферу'));
+  } else {
+    showToast('Буфер недоступний');
+  }
 }
 
 // ===================== X10 =====================
